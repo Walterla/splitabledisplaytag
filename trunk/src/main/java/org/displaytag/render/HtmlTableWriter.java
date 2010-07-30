@@ -839,7 +839,7 @@ public class HtmlTableWriter extends TableWriterAdapter {
             write("</div>");
 
             write("<div id='div_right' style='border: 0px solid red ! important; position:absolute; top:0px; left:" + width_left
-                    + "px; overflow-x: auto; overflow-y: hidden;'>");
+                    + "px; overflow-x: scroll; overflow-y: hidden;'>");
 
             // open table
             writeTableOpener(tableModels[1], "style='border-left:0px;width:" + width_right + "px;'");
