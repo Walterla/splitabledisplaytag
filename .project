@@ -1,0 +1,15 @@
+<projectDescription>
+  <name>displaytag</name>
+  <comment>The display tag library is an open source suite of custom tags that provide high-level web presentation patterns
+    which will work in an MVC model. The library provides a significant amount of functionality while still being easy
+    to use.</comment>
+  <projects/>
+  <buildSpec>
+    <buildCommand>
+      <name>org.eclipse.jdt.core.javabuilder</name>
+    </buildCommand>
+  </buildSpec>
+  <natures>
+    <nature>org.eclipse.jdt.core.javanature</nature>
+  </natures>
+</projectDescription>
