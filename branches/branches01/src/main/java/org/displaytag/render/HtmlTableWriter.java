@@ -30,7 +30,6 @@ import org.displaytag.decorator.TableDecorator;
 import org.displaytag.exception.DecoratorException;
 import org.displaytag.exception.ObjectLookupException;
 import org.displaytag.exception.WrappedRuntimeException;
-import org.displaytag.model.Cell;
 import org.displaytag.model.Column;
 import org.displaytag.model.ColumnIterator;
 import org.displaytag.model.HeaderCell;
@@ -98,6 +97,8 @@ public class HtmlTableWriter extends TableWriterAdapter {
      */
     private Href baseHref;
 
+    
+    private SplitTableHelper splitTableHelper = new SplitTableHelper();
     /**
      * add export links.
      */
@@ -105,15 +106,16 @@ public class HtmlTableWriter extends TableWriterAdapter {
 
     private CaptionTag captionTag;
     
-    private String script=" <script type='text/javascript'>                    "
-                        +" $j(function(){                                     "
-                        +"      var totalwidth = $('statusbar').clientWidth;    "
-                        +"      var leftwidth = $('row_left').clientWidth;      "
-                        +"      var rightwidth = totalwidth -leftwidth +'px';   "
-                        +"      $('div_right').style.width=rightwidth;          " 
-                        +"                                                    "
-                        +" });                                                "
-                        +" </script>                                          ";
+    private String script=" <script type='text/javascript'>                                "
+                        +" $j(function(){                                                  "
+                        +"      var totalwidth = $('statusbar').clientWidth;               "
+                        +"      var leftwidth = $('row_left').clientWidth;                 "
+                        +"      var rightwidth = $('row_right').clientWidth;               "
+                        +"      var rightwidth = totalwidth -leftwidth-rightwidth +'px';   "
+                        +"      $('div_right').style.width=rightwidth;                     " 
+                        +"                                                                 "
+                        +" });                                                             "
+                        +" </script>                                                       ";
 
     /**
      * The paginated list containing the external pagination and sort parameters
@@ -139,7 +141,7 @@ public class HtmlTableWriter extends TableWriterAdapter {
      */
     private String uid;
 
-    private int splitAt;
+    private int[] splitAt;
 
     /**
      * This table writer uses a <code>TableTag</code> and a
@@ -716,8 +718,8 @@ public class HtmlTableWriter extends TableWriterAdapter {
          * id,HtmlAttributeMap attributeMap)to write the split table
          */
         if (this.attributeMap.get(TagConstants.ATTRIBUTE_SPLITAT) != null) {
-            splitAt = Integer.parseInt(this.attributeMap.get(TagConstants.ATTRIBUTE_SPLITAT).toString());
-            writeTable(model, id, attributeMap);
+            splitAt = splitTableHelper.getSplitAt(model,attributeMap);
+            writeSplitTable(model, id);
         } else {
             super.writeTable(model, id);
         }
@@ -756,18 +758,20 @@ public class HtmlTableWriter extends TableWriterAdapter {
      *             throw all sorts of exceptions, depending on their respective
      *             formats and destinations.
      */
-    public void writeTable(TableModel model, String id, HtmlAttributeMap attributeMap) throws JspException {
+    public void writeSplitTable(TableModel model, String id) throws JspException {
         String id1 = "";
-        int width_total[];
+        int width_all[];
         int width_left;
+        int width_center;
         int width_right;
-        TableModel[] tableModels = new TableModel[2];
-        tableModels = this.splitTableModel(model);
-        width_total = this.caculateTableWidth(tableModels[0], splitAt);
-        width_left = width_total[0];
-        width_right = width_total[1];
+        TableModel[] tableModels = new TableModel[3];
+        tableModels = splitTableHelper.splitTableModel(model,splitAt);
+        width_all = splitTableHelper.calculateTableWidth(tableModels[0], splitAt);
+        width_left = width_all[0];
+        width_center = width_all[1];
+        width_right = width_all[2];
         try {
-            //write the js to set the rightdiv's width when whole page is rendered
+            //write the js to set the rightdiv's width after the whole page rendered
             write(this.script);
             // table id used for logging
             id1 = id;
@@ -790,11 +794,12 @@ public class HtmlTableWriter extends TableWriterAdapter {
                 // search result and navigation bar
                 writeTopBanner(model);
             }
-
+            
             write("<div style='position:absolute'>");
 
             write("<div id='div_left' style='border: 0px solid red ! important; position:absolute; left:0px; top:0px;overflow-x: hidden; overflow-y: hidden;'>");
-
+            
+            // write table_left
             // open table
             this.uid += "_left";
             writeTableOpener(tableModels[0], "style='border-right:0px;width:" + width_left + "px;'");
@@ -815,7 +820,7 @@ public class HtmlTableWriter extends TableWriterAdapter {
             }
 
             // open table body
-            this.uid = uid.substring(0, uid.indexOf("_")) + "_right";
+            this.uid = uid.substring(0, uid.indexOf("_")) + "_center";
             writeTableBodyOpener(tableModels[0]);
 
             // render table body
@@ -835,14 +840,15 @@ public class HtmlTableWriter extends TableWriterAdapter {
             if (model.getTableDecorator() != null) {
                 writeDecoratedTableFinish(model);
             }
-
+            
             write("</div>");
-
-            write("<div id='div_right' style='border: 0px solid red ! important; position:absolute; top:0px; left:" + width_left
+            
+            write("<div id='div_center' style='border: 0px solid red ! important; position:absolute; top:0px; left:" + width_left
                     + "px; overflow-x: scroll; overflow-y: hidden;'>");
-
+            
+            // write table_center
             // open table
-            writeTableOpener(tableModels[1], "style='border-left:0px;width:" + width_right + "px;'");
+            writeTableOpener(tableModels[1], "style='border-left:0px;width:" + width_center + "px;'");
 
             // render caption
             if (tableModels[1].getCaption() != null) {
@@ -863,7 +869,7 @@ public class HtmlTableWriter extends TableWriterAdapter {
             writeTableBodyOpener(tableModels[1]);
 
             // render table body
-            writeTableBody(tableModels[1], splitAt);
+            writeTableBody(tableModels[1], splitAt[0]);
 
             // close table body
             writeTableBodyCloser(tableModels[1]);
@@ -1055,106 +1061,8 @@ public class HtmlTableWriter extends TableWriterAdapter {
         }
     }
 
-    /**
-     * split the TableModel into 2 TableModels according to the attribute
-     * splitAt
-     * 
-     * @param tableModel
-     * @return
-     */
-    private TableModel[] splitTableModel(TableModel tableModel) {
-
-        TableModel[] tableModels_splited = new TableModel[2];
-
-        TableModel tableModel_left = (TableModel) (tableModel.clone());
-        TableModel tableModel_right = (TableModel) (tableModel.clone());
-        // tableModel中的HeaderCellList需要一分为二·
-        List headerCellList_left = sliceList(tableModel_left.getHeaderCellList(), 0, this.splitAt);
-        List headerCellList_right = sliceList(tableModel_right.getHeaderCellList(), splitAt, tableModel_right.getHeaderCellList()
-                .size());
-
-        // List rowListFull_left = sliceList(tableModel_left.getRowListFull(),
-        // splitAt, tableModel_left.getRowListFull().size());
-        // List rowListFull_right = sliceList(tableModel_right.getRowListFull(),
-        // splitAt, tableModel_right.getRowListFull().size());
-
-        // List rowListPage_left = sliceList(tableModel_left.getRowListPage(),
-        // splitAt, tableModel_left.getRowListPage().size());
-        // List rowListPage_right = sliceList(tableModel_right.getRowListPage(),
-        // splitAt, tableModel_right.getRowListPage().size());
-
-        tableModel_left.setHeaderCellList(headerCellList_left);
-        tableModel_right.setHeaderCellList(headerCellList_right);
-
-        // tableModel_left.setRowListFull(rowListFull_left);
-        // tableModel_right.setRowListFull(rowListFull_right);
-
-        // tableModel_left.setRowListPage(rowListPage_left);
-        // tableModel_right.setRowListPage(rowListPage_right);
-        tableModels_splited[0] = tableModel_left;
-        tableModels_splited[1] = tableModel_right;
-        return tableModels_splited;
-    }
-
-    /**
-     * use to slice the list
-     * 
-     * @param list
-     * @param begain
-     * @param end
-     * @return
-     */
-    private List sliceList(List list, int begain, int end) {
-        List retlist = new ArrayList();
-        for (int i = begain; i < end; i++) {
-            /**
-             * if list is a headercelllist,should change the headercell's
-             * columnnumber
-             */
-            if (begain > 0 && list.get(i) instanceof org.displaytag.model.HeaderCell) {
-                HeaderCell hc = (HeaderCell) list.get(i);
-                hc.setColumnNumber(hc.getColumnNumber() - begain);
-            }
-            retlist.add(list.get(i));
-        }
-        return retlist;
-    }
-
-    /**
-     * caculate the left table's width
-     * 
-     * @param left
-     *            table's tablemodel
-     * @return width of the left table
-     */
-    private int[] caculateTableWidth(TableModel model, int splitAt) {
-
-        int width[] = { 0, 0 };
-        Row row = null;
-        int loop_flag = 0;
-        RowIterator rowIterator = model.getRowIterator(false);
-        // get the first row of the table
-        if (rowIterator.hasNext()) {
-            row = rowIterator.next();
-        }
-
-        List cellList = row.getCellList();
-        Iterator it = cellList.listIterator();
-        int totalWidth = 0;
-        while (it.hasNext()) {
-            Cell cell = (Cell) it.next();
-            String att_width = cell.getPerRowAttributes().get(TagConstants.ATTRIBUTE_STYLE).toString();
-            if (att_width.toLowerCase().endsWith("px")) {
-                totalWidth += Integer.parseInt(att_width.substring(6, att_width.length() - 2));
-            }
-            if (loop_flag++ == splitAt-1) {
-                // set the size of left table
-                width[0] = totalWidth;
-            }
-        }
-        // set the size of the right table
-        width[1] = totalWidth - width[0];
-        return width;
-    }
+    
+    
+    
 
 }
