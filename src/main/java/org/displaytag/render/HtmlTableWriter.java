@@ -16,7 +16,6 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import javax.servlet.jsp.JspException;
@@ -110,9 +109,9 @@ public class HtmlTableWriter extends TableWriterAdapter {
                         +" $j(function(){                                                  "
                         +"      var totalwidth = $('statusbar').clientWidth;               "
                         +"      var leftwidth = $('row_left').clientWidth;                 "
-                        +"      var rightwidth = $('row_right').clientWidth;               "
-                        +"      var rightwidth = totalwidth -leftwidth-rightwidth +'px';   "
-                        +"      $('div_right').style.width=rightwidth;                     " 
+                        +"      var centerwidth = $('row_right').clientWidth;               "
+                        +"      var rightwidth = totalwidth -leftwidth-centerwidth +'px';   "
+                        +"      $('div_center').style.width=rightwidth;                     " 
                         +"                                                                 "
                         +" });                                                             "
                         +" </script>                                                       ";
@@ -886,6 +885,51 @@ public class HtmlTableWriter extends TableWriterAdapter {
                 writeDecoratedTableFinish(model);
             }
             write("</div>");
+            
+            write("<div id='div_right' style='border: 0px solid red ! important; position:absolute; top:0px; right:0px; overflow-x: scroll; overflow-y: hidden;'>");
+            
+            // write table_right
+            // open table
+            writeTableOpener(tableModels[1], "style='border-left:0px;width:" + width_right + "px;'");
+
+            // render caption
+            if (tableModels[1].getCaption() != null) {
+                writeCaption(tableModels[2]);
+            }
+
+            // render headers
+            if (tableModels[2].getProperties().getShowHeader()) {
+                writeTableHeader(tableModels[2]);
+            }
+
+            // render footer prior to body
+            if (tableModels[2].getFooter() != null) {
+                writePreBodyFooter(tableModels[2]);
+            }
+
+            // open table body
+            writeTableBodyOpener(tableModels[2]);
+
+            // render table body
+            writeTableBody(tableModels[2], splitAt[1]);
+
+            // close table body
+            writeTableBodyCloser(tableModels[2]);
+
+            // render footer after body
+            if (tableModels[2].getFooter() != null) {
+                writePostBodyFooter(tableModels[2]);
+            }
+
+            // close table
+            writeTableCloser(model);
+
+            if (model.getTableDecorator() != null) {
+                writeDecoratedTableFinish(model);
+            }
+            write("</div>");
+
+            writeBottomBanner(model);
 
             writeBottomBanner(model);
 
