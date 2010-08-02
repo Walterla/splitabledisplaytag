@@ -96,7 +96,7 @@ public class SplitTableHelper {
             if (loop_flag++ == splitAt[0] - 1) {
                 // set the size of left table
                 width[0] = totalWidth;
-            }else if(loop_flag++ == splitAt[1]-1) {
+            }else if(loop_flag == splitAt[1]) {
                 width[1] = totalWidth - width[0];
             }
         }
@@ -116,7 +116,7 @@ public class SplitTableHelper {
         int[] splitAtInt = new int[2];
         int totalColumn = tableModel.getHeaderCellList().size();
         splitAtInt[0] = Integer.parseInt(splitAtStr[0]);
-        splitAtInt[1] = Integer.parseInt(totalColumn + splitAtStr[1]);
+        splitAtInt[1] = totalColumn + Integer.parseInt(splitAtStr[1]);
         return splitAtInt;
     }
 }

@@ -109,10 +109,10 @@ public class HtmlTableWriter extends TableWriterAdapter {
                         +" $j(function(){                                                  "
                         +"      var totalwidth = $('statusbar').clientWidth;               "
                         +"      var leftwidth = $('row_left').clientWidth;                 "
-                        +"      var centerwidth = $('row_right').clientWidth;               "
-                        +"      var rightwidth = totalwidth -leftwidth-centerwidth +'px';   "
-                        +"      $('div_center').style.width=rightwidth;                     " 
-                        +"                                                                 "
+                        +"      var rightwidth = $('row_right').style.width;              "
+                        +"      var centerwidth= totalwidth -leftwidth-parseInt(rightwidth.substr(0,rightwidth.length-2))-2 +'px';     "
+                        +"      $('div_center').style.width=centerwidth;                      " 
+                        +"      $('div_right').style.left=leftwidth+parseInt(centerwidth.substr(0,centerwidth.length-2))+1 + 'px';  " 
                         +" });                                                             "
                         +" </script>                                                       ";
 
@@ -819,7 +819,7 @@ public class HtmlTableWriter extends TableWriterAdapter {
             }
 
             // open table body
-            this.uid = uid.substring(0, uid.indexOf("_")) + "_center";
+            
             writeTableBodyOpener(tableModels[0]);
 
             // render table body
@@ -847,7 +847,8 @@ public class HtmlTableWriter extends TableWriterAdapter {
             
             // write table_center
             // open table
-            writeTableOpener(tableModels[1], "style='border-left:0px;width:" + width_center + "px;'");
+            this.uid = uid.substring(0, uid.indexOf("_")) + "_center";
+            writeTableOpener(tableModels[1], "style='border-left:0px;border-right:0px;width:" + width_center + "px;'");
 
             // render caption
             if (tableModels[1].getCaption() != null) {
@@ -886,10 +887,15 @@ public class HtmlTableWriter extends TableWriterAdapter {
             }
             write("</div>");
             
-            write("<div id='div_right' style='border: 0px solid red ! important; position:absolute; top:0px; right:0px; overflow-x: scroll; overflow-y: hidden;'>");
+            if(width_right == 0){
+                write("<div id='div_right' style='border: 0px solid red ! important; position:absolute; top:0px;  width:0px;overflow-x: hidden; overflow-y: hidden;'>");
+            }else{
+                write("<div id='div_right' style='border: 0px solid red ! important; position:absolute; top:0px;  overflow-x: hidden; overflow-y: hidden;'>");
+            }
             
             // write table_right
             // open table
+            this.uid = uid.substring(0, uid.indexOf("_")) + "_right";
             writeTableOpener(tableModels[1], "style='border-left:0px;width:" + width_right + "px;'");
 
             // render caption
